@@ -77,6 +77,8 @@ Give short answer.
         return jsonify({"reply": reply})
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print("FULL ERROR:", str(e))
         return jsonify({"reply": str(e)}), 500
 
