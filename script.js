@@ -40,7 +40,7 @@ function setComposerState(disabled) {
 }
 
 async function requestBotReply(message) {
-  const response = await fetch(`${apiBaseUrl}/api/chat`, {
+  const response = await fetch(`${apiBaseUrl}/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
