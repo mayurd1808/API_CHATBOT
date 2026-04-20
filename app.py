@@ -55,17 +55,24 @@ def chat():
 You are CourseBot.
 
 Use this course data:
-{json.dumps(course_data, indent=2)}
-
-Answer only from course data.
-Keep answer short and clear.
+{json.dumps(course_data)}
 
 Question: {user_message}
+
+Give short answer.
 """
 
         response = model.generate_content(prompt)
 
-        reply = response.text if hasattr(response, "text") else "No response generated."
+        # 🔥 SAFE extraction
+        reply = ""
+
+        if hasattr(response, "text") and response.text:
+            reply = response.text
+        elif hasattr(response, "candidates"):
+            reply = response.candidates[0].content.parts[0].text
+        else:
+            reply = "No response from Gemini."
 
         return jsonify({"reply": reply})
 
