@@ -55,16 +55,14 @@ def chat():
         user_message = data.get("message", "")
 
         prompt = f"""
-You are CourseBot for educational institute.
+You are CourseBot.
 
-Use this course data to answer:
+Use this data:
+{json.dumps(course_data)}
 
-{json.dumps(course_data, indent=2)}
+Question: {user_message}
 
-Student Question:
-{user_message}
-
-Give short clear helpful answer.
+Give short answer.
 """
 
         response = model.generate_content(prompt)
@@ -74,8 +72,9 @@ Give short clear helpful answer.
         })
 
     except Exception as e:
+        print("CHAT ERROR:", str(e))
         return jsonify({
-            "reply": f"Error: {str(e)}"
+            "reply": str(e)
         }), 500
 
 # --------------------
