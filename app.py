@@ -72,10 +72,10 @@ Give short answer.
         })
 
     except Exception as e:
-        print("CHAT ERROR:", str(e))
-        return jsonify({
-            "reply": str(e)
-        }), 500
+     print("FULL ERROR:", str(e))
+     return jsonify({
+        "reply": str(e)
+    }), 500
 
 # --------------------
 # Run App
