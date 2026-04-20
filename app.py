@@ -17,8 +17,7 @@ if not GEMINI_API_KEY:
 
 genai.configure(api_key=GEMINI_API_KEY)
 
-model = genai.GenerativeModel("gemini-1.5-flash")
-
+model = genai.GenerativeModel(os.getenv("OPENAI_MODEL", "gemini-1.5-flash-latest"))
 # --------------------
 # Load Course Data
 # --------------------
