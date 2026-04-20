@@ -7,10 +7,8 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from openai import OpenAI
 
-
 BASE_DIR = Path(__file__).parent
 DATA_PATH = BASE_DIR / "data" / "course_data.json"
-
 
 load_dotenv(BASE_DIR / ".env")
 
@@ -19,45 +17,41 @@ CORS(app)
 
 
 def load_data():
-    with DATA_PATH.open("r", encoding="utf-8") as file:
+    with open(DATA_PATH, "r", encoding="utf-8") as file:
         return json.load(file)
 
 
 def build_system_instructions(data):
-    catalog = json.dumps(data, indent=2, ensure_ascii=True)
     return (
-        "You are CourseBot, a helpful admissions chatbot for a training institute.\n"
-        "Answer only using the course catalog and contact details provided below.\n"
-        "If the user asks a follow-up question like 'what about timings?' or 'tell me the fee', "
-        "use the previous conversation context to infer the course when possible.\n"
-        "If the user asks for a course or detail that is not in the catalog, say that clearly and "
-        "invite them to contact admissions.\n"
-        "Keep answers concise, friendly, and practical.\n"
-        "When listing syllabus items, format them as short bullet points.\n\n"
-        f"Course catalog:\n{catalog}"
+        "You are CourseBot, a helpful admissions chatbot. "
+        "Answer only using the course data provided."
     )
 
 
 def get_openai_client():
     api_key = os.getenv("OPENAI_API_KEY")
+
     if not api_key:
         return None
+
     return OpenAI(api_key=api_key)
 
 
-@app.get("/")
+@app.route("/")
 def index():
     return send_from_directory(BASE_DIR, "index.html")
 
 
-@app.get("/health")
+@app.route("/health")
 def health():
     return jsonify({"ok": True})
 
 
-@app.post("/api/chat")
+@app.route("/chat", methods=["POST"])
+@app.route("/api/chat", methods=["POST"])
 def chat():
     payload = request.get_json(silent=True) or {}
+
     message = (payload.get("message") or "").strip()
     previous_response_id = payload.get("previous_response_id")
 
@@ -65,17 +59,11 @@ def chat():
         return jsonify({"error": "Please enter a question."}), 400
 
     client = get_openai_client()
+
     if client is None:
-        return (
-            jsonify(
-                {
-                    "error": (
-                        "OPENAI_API_KEY is missing. Add it to a .env file before starting the server."
-                    )
-                }
-            ),
-            500,
-        )
+        return jsonify({
+            "error": "OPENAI_API_KEY missing in Render variables."
+        }), 500
 
     data = load_data()
 
@@ -85,20 +73,18 @@ def chat():
             instructions=build_system_instructions(data),
             input=message,
             previous_response_id=previous_response_id,
-            store=True,
+            store=True
         )
-    except Exception as exc:
-        return jsonify({"error": f"OpenAI request failed: {exc}"}), 502
 
-    return jsonify(
-        {
+        return jsonify({
             "reply": response.output_text,
-            "response_id": response.id,
-        }
-    )
+            "response_id": response.id
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
