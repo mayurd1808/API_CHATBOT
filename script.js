@@ -65,9 +65,9 @@ async function requestBotReply(message) {
     );
   }
 
-  if (!response.ok) {
-    throw new Error(payload.error || "Something went wrong while contacting the chatbot API.");
-  }
+if (!response.ok) {
+   throw new Error(payload.reply || payload.error || "Unknown backend error");
+}
 
   previousResponseId = payload.response_id || null;
   return payload.reply || "I could not generate a response this time.";
@@ -94,8 +94,8 @@ async function handleSend(message) {
     const response = await requestBotReply(message);
     placeholder.textContent = response;
   } catch (error) {
-    placeholder.textContent = error.message;
-  } finally {
+   addBotMessage("Error: " + error.message);
+} finally {
     isSending = false;
     setComposerState(false);
     userInput.focus();
