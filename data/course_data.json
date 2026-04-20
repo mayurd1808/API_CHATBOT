@@ -1,0 +1,60 @@
+{
+  "courses": [
+    {
+      "name": "AI Foundations Bootcamp",
+      "aliases": ["ai foundations", "bootcamp", "ai bootcamp"],
+      "fees": "INR 24,999",
+      "duration": "8 weeks",
+      "syllabus": [
+        "Python basics for AI",
+        "Prompt engineering fundamentals",
+        "Introduction to machine learning",
+        "Working with APIs and automation tools",
+        "Mini project: FAQ chatbot"
+      ],
+      "eligibility": "Basic programming knowledge and comfort using a computer regularly.",
+      "timings": "Weekend batches: Saturday and Sunday, 10:00 AM to 12:00 PM IST.",
+      "mode": "Online live classes with recorded sessions.",
+      "certification": "Certificate of completion is provided after the final project submission."
+    },
+    {
+      "name": "Data Science Career Program",
+      "aliases": ["data science", "career program", "ds program"],
+      "fees": "INR 39,999",
+      "duration": "16 weeks",
+      "syllabus": [
+        "Python for data analysis",
+        "Statistics and exploratory data analysis",
+        "Machine learning with scikit-learn",
+        "SQL and dashboards",
+        "Capstone project and interview prep"
+      ],
+      "eligibility": "Graduates, final-year students, or working professionals with basic math and programming exposure.",
+      "timings": "Weekday batches: Monday, Wednesday, Friday, 7:00 PM to 9:00 PM IST.",
+      "mode": "Hybrid learning: live online sessions plus self-paced assignments.",
+      "certification": "Industry-ready certificate and capstone review upon completion."
+    },
+    {
+      "name": "Automation with Python",
+      "aliases": ["automation", "python automation", "automation with python"],
+      "fees": "INR 18,500",
+      "duration": "6 weeks",
+      "syllabus": [
+        "Python scripting essentials",
+        "Working with files, email, and spreadsheets",
+        "REST APIs and webhook basics",
+        "Task scheduling and workflow automation",
+        "Final automation project"
+      ],
+      "eligibility": "Beginners with basic Python syntax knowledge.",
+      "timings": "Evening batches: Tuesday and Thursday, 6:30 PM to 8:00 PM IST.",
+      "mode": "Online instructor-led program.",
+      "certification": "Project-based completion certificate."
+    }
+  ],
+  "default_contact": {
+    "email": "admissions@example.com",
+    "phone": "+91-98765-43210",
+    "hours": "Monday to Saturday, 9:00 AM to 6:00 PM IST"
+  }
+}
