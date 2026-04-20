@@ -1,90 +1,86 @@
-import json
 import os
-from pathlib import Path
-
-from dotenv import load_dotenv
-from flask import Flask, jsonify, request, send_from_directory
+import json
+import google.generativeai as genai
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-from openai import OpenAI
 
-BASE_DIR = Path(__file__).parent
-DATA_PATH = BASE_DIR / "data" / "course_data.json"
-
-load_dotenv(BASE_DIR / ".env")
-
-app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
+# --------------------
+# Flask Setup
+# --------------------
+app = Flask(__name__, static_folder=".")
 CORS(app)
 
+# --------------------
+# Gemini API Key
+# --------------------
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-def load_data():
-    with open(DATA_PATH, "r", encoding="utf-8") as file:
-        return json.load(file)
+genai.configure(api_key=GEMINI_API_KEY)
 
+model = genai.GenerativeModel("gemini-1.5-flash")
 
-def build_system_instructions(data):
-    return (
-        "You are CourseBot, a helpful admissions chatbot. "
-        "Answer only using the course data provided."
-    )
+# --------------------
+# Load Course Data
+# --------------------
+def load_course_data():
+    try:
+        with open("data/course_data.json", "r", encoding="utf-8") as file:
+            return json.load(file)
+    except:
+        return {}
 
+course_data = load_course_data()
 
-def get_openai_client():
-    api_key = os.getenv("OPENAI_API_KEY")
-
-    if not api_key:
-        return None
-
-    return OpenAI(api_key=api_key)
-
-
+# --------------------
+# Home Route
+# --------------------
 @app.route("/")
-def index():
-    return send_from_directory(BASE_DIR, "index.html")
+def home():
+    return send_from_directory(".", "index.html")
 
-
+# --------------------
+# Health Check
+# --------------------
 @app.route("/health")
 def health():
-    return jsonify({"ok": True})
+    return jsonify({"status": "ok"})
 
-
+# --------------------
+# Chat Route
+# --------------------
 @app.route("/chat", methods=["POST"])
-@app.route("/api/chat", methods=["POST"])
 def chat():
-    payload = request.get_json(silent=True) or {}
-
-    message = (payload.get("message") or "").strip()
-    previous_response_id = payload.get("previous_response_id")
-
-    if not message:
-        return jsonify({"error": "Please enter a question."}), 400
-
-    client = get_openai_client()
-
-    if client is None:
-        return jsonify({
-            "error": "OPENAI_API_KEY missing in Render variables."
-        }), 500
-
-    data = load_data()
-
     try:
-        response = client.responses.create(
-            model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-            instructions=build_system_instructions(data),
-            input=message,
-            previous_response_id=previous_response_id,
-            store=True
-        )
+        data = request.get_json()
+        user_message = data.get("message", "")
+
+        prompt = f"""
+You are CourseBot for educational institute.
+
+Use this course data to answer:
+
+{json.dumps(course_data, indent=2)}
+
+Student Question:
+{user_message}
+
+Give short clear helpful answer.
+"""
+
+        response = model.generate_content(prompt)
 
         return jsonify({
-            "reply": response.output_text,
-            "response_id": response.id
+            "reply": response.text
         })
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "reply": f"Error: {str(e)}"
+        }), 500
 
-
+# --------------------
+# Run App
+# --------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
