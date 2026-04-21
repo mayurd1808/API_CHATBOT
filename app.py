@@ -74,9 +74,7 @@ Question: {user_message}
         return jsonify({"reply": reply})
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({"reply": str(e)}), 500
+       return jsonify({"reply":"API quota exceeded. Please try later."}), 500
 
 # -----------------------------
 # Run App
