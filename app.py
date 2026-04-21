@@ -1,84 +1,125 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from groq import Groq
 import os
 import json
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
-from google import genai
 
-# -----------------------------
-# Flask App
-# -----------------------------
-app = Flask(__name__, static_folder=".")
+app = Flask(__name__)
 CORS(app)
 
-# -----------------------------
-# Gemini API Key
-# -----------------------------
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# -----------------------------------
+# Groq Client
+# -----------------------------------
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-if not GEMINI_API_KEY:
-    raise Exception("GEMINI_API_KEY not found in Render Environment Variables")
+# -----------------------------------
+# Memory Storage
+# -----------------------------------
+chat_memory = []
 
-client = genai.Client(api_key=GEMINI_API_KEY)
-
-# -----------------------------
+# -----------------------------------
 # Load Course Data
-# -----------------------------
-def load_course_data():
-    try:
-        with open("data/course_data.json", "r", encoding="utf-8") as file:
-            return json.load(file)
-    except Exception:
-        return {}
+# -----------------------------------
+course_data = {
+    "courses": [
+        {
+            "name": "AI Foundations Bootcamp",
+            "fee": "₹4,999",
+            "duration": "6 Weeks",
+            "timings": "Mon-Fri 7 PM to 8 PM",
+            "syllabus": "Python, AI Basics, Prompt Engineering, Real Projects"
+        },
+        {
+            "name": "Data Science Career Program",
+            "fee": "₹9,999",
+            "duration": "3 Months",
+            "timings": "Weekend Batches",
+            "syllabus": "Python, SQL, Power BI, Machine Learning"
+        },
+        {
+            "name": "Automation with Python",
+            "fee": "₹5,999",
+            "duration": "2 Months",
+            "timings": "Sat-Sun Evening",
+            "syllabus": "Python Automation, Selenium, Excel Automation"
+        }
+    ]
+}
 
-course_data = load_course_data()
-
-# -----------------------------
-# Routes
-# -----------------------------
+# -----------------------------------
+# Home Route
+# -----------------------------------
 @app.route("/")
 def home():
-    return send_from_directory(".", "index.html")
+    return "CourseBot Groq Backend Running"
 
-@app.route("/health")
-def health():
-    return jsonify({"status": "ok"})
-
+# -----------------------------------
+# Chat Route
+# -----------------------------------
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        data = request.get_json(silent=True) or {}
+        data = request.get_json()
         user_message = data.get("message", "").strip()
 
         if not user_message:
-            return jsonify({"reply": "Please type a question."}), 400
+            return jsonify({"reply": "Please type your question."})
 
-        prompt = f"""
-You are CourseBot.
+        # Save User Message
+        chat_memory.append({"role": "user", "content": user_message})
+
+        # Keep only last 6 chats
+        if len(chat_memory) > 6:
+            chat_memory.pop(0)
+
+        system_prompt = f"""
+You are CourseBot, a smart admission assistant.
 
 Use this course data:
-{json.dumps(course_data)}
 
-Answer only based on available course data.
-Keep answers short, clear, and helpful.
+{json.dumps(course_data, indent=2)}
 
-Question: {user_message}
+Rules:
+- Answer short and professional.
+- If user asks fee, timings, syllabus, eligibility etc answer from course data.
+- If user says hi/hello greet politely.
+- Remember previous messages.
+- If not found, say kindly contact admissions team.
 """
 
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(chat_memory)
+
+        completion = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=messages,
+            temperature=0.7,
+            max_tokens=300
         )
 
-        reply = response.text if response.text else "No response generated."
+        reply = completion.choices[0].message.content
+
+        # Save Bot Reply
+        chat_memory.append({"role": "assistant", "content": reply})
 
         return jsonify({"reply": reply})
 
     except Exception as e:
-       return jsonify({"reply":"API quota exceeded. Please try later."}), 500
+        print(str(e))
+        return jsonify({"reply": "Server error. Please try again later."}), 500
 
-# -----------------------------
+# -----------------------------------
+# Clear Memory Route
+# -----------------------------------
+@app.route("/clear", methods=["POST"])
+def clear_chat():
+    global chat_memory
+    chat_memory = []
+    return jsonify({"message": "Memory cleared"})
+
+# -----------------------------------
 # Run App
-# -----------------------------
+# -----------------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
+    port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
