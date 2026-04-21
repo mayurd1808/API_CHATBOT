@@ -1,26 +1,28 @@
 import os
 import json
-import google.generativeai as genai
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from google import genai
 
+# -----------------------------
+# Flask App
+# -----------------------------
 app = Flask(__name__, static_folder=".")
 CORS(app)
 
-# --------------------
+# -----------------------------
 # Gemini API Key
-# --------------------
+# -----------------------------
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GEMINI_API_KEY:
     raise Exception("GEMINI_API_KEY not found in Render Environment Variables")
 
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
 
-model = genai.GenerativeModel("gemini-1.5-flash")
-# --------------------
+# -----------------------------
 # Load Course Data
-# --------------------
+# -----------------------------
 def load_course_data():
     try:
         with open("data/course_data.json", "r", encoding="utf-8") as file:
@@ -30,9 +32,9 @@ def load_course_data():
 
 course_data = load_course_data()
 
-# --------------------
+# -----------------------------
 # Routes
-# --------------------
+# -----------------------------
 @app.route("/")
 def home():
     return send_from_directory(".", "index.html")
@@ -56,34 +58,29 @@ You are CourseBot.
 Use this course data:
 {json.dumps(course_data)}
 
-Question: {user_message}
+Answer only based on available course data.
+Keep answers short, clear, and helpful.
 
-Give short answer.
+Question: {user_message}
 """
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
+        )
 
-        # 🔥 SAFE extraction
-        reply = ""
-
-        if hasattr(response, "text") and response.text:
-            reply = response.text
-        elif hasattr(response, "candidates"):
-            reply = response.candidates[0].content.parts[0].text
-        else:
-            reply = "No response from Gemini."
+        reply = response.text if response.text else "No response generated."
 
         return jsonify({"reply": reply})
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        print("FULL ERROR:", str(e))
         return jsonify({"reply": str(e)}), 500
 
-# --------------------
+# -----------------------------
 # Run App
-# --------------------
+# -----------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
