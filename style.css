@@ -344,7 +344,7 @@ body::before {
   border-radius: 18px;
   background: linear-gradient(135deg, var(--green), var(--accent));
   color: #071816;
-  animation: botGlow 2.8s ease-in-out infinite;
+  
 }
 
 .chat-header h2 {
