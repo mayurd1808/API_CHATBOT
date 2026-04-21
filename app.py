@@ -1,125 +1,126 @@
-from flask import Flask, request, jsonify
+import json
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from groq import Groq
-import os
-import json
 
-app = Flask(__name__)
+
+BASE_DIR = Path(__file__).parent
+DATA_PATH = BASE_DIR / "data" / "course_data.json"
+
+load_dotenv(BASE_DIR / ".env")
+
+app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
 CORS(app)
 
-# -----------------------------------
-# Groq Client
-# -----------------------------------
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+chat_memory = {}
 
-# -----------------------------------
-# Memory Storage
-# -----------------------------------
-chat_memory = []
 
-# -----------------------------------
-# Load Course Data
-# -----------------------------------
-course_data = {
-    "courses": [
-        {
-            "name": "AI Foundations Bootcamp",
-            "fee": "₹4,999",
-            "duration": "6 Weeks",
-            "timings": "Mon-Fri 7 PM to 8 PM",
-            "syllabus": "Python, AI Basics, Prompt Engineering, Real Projects"
-        },
-        {
-            "name": "Data Science Career Program",
-            "fee": "₹9,999",
-            "duration": "3 Months",
-            "timings": "Weekend Batches",
-            "syllabus": "Python, SQL, Power BI, Machine Learning"
-        },
-        {
-            "name": "Automation with Python",
-            "fee": "₹5,999",
-            "duration": "2 Months",
-            "timings": "Sat-Sun Evening",
-            "syllabus": "Python Automation, Selenium, Excel Automation"
-        }
-    ]
-}
+def load_course_data():
+    with DATA_PATH.open("r", encoding="utf-8") as file:
+        return json.load(file)
 
-# -----------------------------------
-# Home Route
-# -----------------------------------
-@app.route("/")
-def home():
-    return "CourseBot Groq Backend Running"
 
-# -----------------------------------
-# Chat Route
-# -----------------------------------
-@app.route("/chat", methods=["POST"])
-def chat():
-    try:
-        data = request.get_json()
-        user_message = data.get("message", "").strip()
+def get_groq_client():
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return None
+    return Groq(api_key=api_key)
 
-        if not user_message:
-            return jsonify({"reply": "Please type your question."})
 
-        # Save User Message
-        chat_memory.append({"role": "user", "content": user_message})
+def build_system_prompt():
+    course_data = load_course_data()
+    catalog = json.dumps(course_data, indent=2, ensure_ascii=True)
 
-        # Keep only last 6 chats
-        if len(chat_memory) > 6:
-            chat_memory.pop(0)
+    return f"""
+You are CourseBot, a friendly admissions assistant for a training institute.
 
-        system_prompt = f"""
-You are CourseBot, a smart admission assistant.
-
-Use this course data:
-
-{json.dumps(course_data, indent=2)}
+Use only this course catalog and contact data:
+{catalog}
 
 Rules:
-- Answer short and professional.
-- If user asks fee, timings, syllabus, eligibility etc answer from course data.
-- If user says hi/hello greet politely.
-- Remember previous messages.
-- If not found, say kindly contact admissions team.
-"""
+- Answer greetings politely and invite the user to ask about courses.
+- Answer fees, duration, syllabus, eligibility, timings, mode, certification, and contact questions from the catalog.
+- Use the previous messages to understand follow-up questions like "what about syllabus?" or "and timings?".
+- If the answer is not available in the catalog, say so clearly and suggest contacting admissions.
+- Keep replies concise, helpful, and easy to read.
+- Do not invent courses, discounts, deadlines, or admission promises.
+""".strip()
 
-        messages = [{"role": "system", "content": system_prompt}]
-        messages.extend(chat_memory)
 
-        completion = client.chat.completions.create(
-            model="llama3-8b-8192",
-            messages=messages,
-            temperature=0.7,
-            max_tokens=300
+def get_session_messages(session_id):
+    if session_id not in chat_memory:
+        chat_memory[session_id] = []
+    return chat_memory[session_id]
+
+
+@app.route("/")
+def home():
+    return app.send_static_file("index.html")
+
+
+@app.route("/health")
+def health():
+    return jsonify({"ok": True, "service": "CourseBot API"})
+
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    payload = request.get_json(silent=True) or {}
+    user_message = (payload.get("message") or "").strip()
+    session_id = (payload.get("session_id") or "default").strip()
+
+    if not user_message:
+        return jsonify({"reply": "Please type your question so I can help."}), 400
+
+    client = get_groq_client()
+    if client is None:
+        return (
+            jsonify(
+                {
+                    "reply": (
+                        "GROQ_API_KEY is missing. Add it in your backend environment or local .env file."
+                    )
+                }
+            ),
+            500,
         )
 
-        reply = completion.choices[0].message.content
+    session_messages = get_session_messages(session_id)
+    session_messages.append({"role": "user", "content": user_message})
+    chat_memory[session_id] = session_messages[-10:]
 
-        # Save Bot Reply
-        chat_memory.append({"role": "assistant", "content": reply})
+    messages = [{"role": "system", "content": build_system_prompt()}]
+    messages.extend(chat_memory[session_id])
 
-        return jsonify({"reply": reply})
+    try:
+        completion = client.chat.completions.create(
+            model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
+            messages=messages,
+            temperature=0.45,
+            max_tokens=450,
+        )
+    except Exception as exc:
+        return jsonify({"reply": f"API request failed: {exc}"}), 502
 
-    except Exception as e:
-        print(str(e))
-        return jsonify({"reply": "Server error. Please try again later."}), 500
+    reply = completion.choices[0].message.content.strip()
+    chat_memory[session_id].append({"role": "assistant", "content": reply})
+    chat_memory[session_id] = chat_memory[session_id][-10:]
 
-# -----------------------------------
-# Clear Memory Route
-# -----------------------------------
+    return jsonify({"reply": reply})
+
+
 @app.route("/clear", methods=["POST"])
 def clear_chat():
-    global chat_memory
-    chat_memory = []
+    payload = request.get_json(silent=True) or {}
+    session_id = (payload.get("session_id") or "default").strip()
+    chat_memory.pop(session_id, None)
     return jsonify({"message": "Memory cleared"})
 
-# -----------------------------------
-# Run App
-# -----------------------------------
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=os.getenv("FLASK_DEBUG") == "1")

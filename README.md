@@ -1,32 +1,17 @@
-# Course Query Chatbot
+# CourseBot AI Chat
 
-This project is now a small Flask-based chatbot app that uses the OpenAI API for more flexible, multi-turn course conversations. The API key stays on the backend, and the frontend passes the previous response ID so follow-up questions like "what about timings?" still work.
+CourseBot is a Flask + Groq API chatbot for course admissions questions. The UI is a polished animated web chat, and the backend uses `data/course_data.json` so answers stay grounded in your course catalog.
 
 ## Features
 
-- Supports multi-question and follow-up conversation flow
-- Keeps the API key on the server through `.env`
-- Uses your course catalog from `data/course_data.json` to ground answers
-- Includes a browser chat UI with quick question chips
-- Returns clear errors if the API key is missing or the API call fails
+- Animated responsive chat interface
+- Groq API integration through Flask
+- Per-browser-session conversation memory
+- Course catalog loaded from `data/course_data.json`
+- Clear backend/API error messages
+- Works locally, or with GitHub Pages frontend plus a deployed backend
 
-## Project Structure
-
-```text
-.
-|-- .env.example
-|-- .gitignore
-|-- app.py
-|-- index.html
-|-- requirements.txt
-|-- script.js
-|-- style.css
-|-- data/
-|   `-- course_data.json
-`-- README.md
-```
-
-## Setup
+## Local Setup
 
 1. Install dependencies:
 
@@ -34,43 +19,45 @@ This project is now a small Flask-based chatbot app that uses the OpenAI API for
    pip install -r requirements.txt
    ```
 
-2. Create a `.env` file from `.env.example` and add your real API key:
+2. Create a `.env` file in this folder:
 
    ```env
-   OPENAI_API_KEY=your_openai_api_key_here
-   OPENAI_MODEL=gpt-4o-mini
+   GROQ_API_KEY=your_real_groq_api_key_here
+   GROQ_MODEL=llama-3.1-8b-instant
    ```
 
-3. Start the app:
+3. Start the backend:
 
    ```bash
    python app.py
    ```
 
-4. Open this URL in your browser:
+4. Open:
 
    ```text
-   http://127.0.0.1:5000
+   http://127.0.0.1:10000
    ```
 
-## Example Conversation
+## GitHub Pages Setup
+
+GitHub Pages can host only the frontend. It cannot run `app.py`.
+
+If you deploy the Flask backend on Render, Railway, Replit, or another host, create `config.js` from `config.example.js` and set the backend base URL:
+
+```js
+window.CHATBOT_API_URL = "https://your-backend-url.onrender.com";
+```
+
+Do not add `/chat` at the end. The frontend adds `/chat` automatically.
+
+## Example Questions
 
 - What is the fee for AI Foundations Bootcamp?
-- What about the syllabus?
+- What about its syllabus?
 - And the timings?
-- Is it online?
+- Which course is best for beginners?
 - How can I contact admissions?
 
-## Notes
+## Important
 
-- The chatbot answers from the course catalog in `data/course_data.json`.
-- GitHub Pages can host only the frontend. It cannot run the Flask backend.
-- If you want to keep using GitHub Pages for the UI, deploy the Flask backend separately on Render, Railway, Replit, or another Python host.
-- Then create a `config.js` file from `config.example.js` and set:
-
-  ```js
-  window.CHATBOT_API_URL = "https://your-backend-url.onrender.com";
-  ```
-
-- The frontend will call `https://your-backend-url.onrender.com/api/chat`.
-- For multi-turn chat, the backend uses the OpenAI Responses API with the previous response ID.
+Never paste your real API key into GitHub files like `.env.example`, `script.js`, or `index.html`. Put the real key only in `.env` locally or in your backend hosting provider's environment variables.

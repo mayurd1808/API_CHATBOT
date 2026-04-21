@@ -1,1 +1,1 @@
-window.CHATBOT_API_URL = "https://your-backend-url.onrender.com/chat";
+window.CHATBOT_API_URL = "https://your-backend-url.onrender.com";

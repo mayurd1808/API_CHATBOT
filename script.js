@@ -1,42 +1,78 @@
-const courseData = {
-  courses: [
-    {
-      name: "AI Foundations Bootcamp"
-    },
-    {
-      name: "Data Science Career Program"
-    },
-    {
-      name: "Automation with Python"
-    }
-  ]
-};
+const courses = [
+  "AI Foundations Bootcamp",
+  "Data Science Career Program",
+  "Automation with Python"
+];
 
 const chatMessages = document.getElementById("chat-messages");
 const chatForm = document.getElementById("chat-form");
 const userInput = document.getElementById("user-input");
+const sendButton = document.getElementById("send-button");
 const clearChatButton = document.getElementById("clear-chat");
 const chips = document.querySelectorAll(".chip");
+const statusText = document.getElementById("status-text");
 
-let previousResponseId = null;
+const apiBaseUrl = (window.CHATBOT_API_URL || "").replace(/\/$/, "");
+const sessionId = getSessionId();
 let isSending = false;
-const apiBaseUrl = window.CHATBOT_API_URL || "";
 
-function formatCourseList() {
-  return `We currently offer: ${courseData.courses.map((course) => course.name).join(", ")}.`;
+function getSessionId() {
+  const existing = localStorage.getItem("coursebot_session_id");
+  if (existing) {
+    return existing;
+  }
+
+  const next = crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
+  localStorage.setItem("coursebot_session_id", next);
+  return next;
 }
 
-function appendMessage(content, sender) {
+function appendMessage(content, sender, options = {}) {
   const message = document.createElement("div");
   message.className = `message ${sender}`;
-  message.textContent = content;
+
+  const avatar = document.createElement("span");
+  avatar.className = "message-avatar";
+  avatar.textContent = sender === "bot" ? "CB" : "YOU";
+
+  const bubble = document.createElement("p");
+  bubble.className = "message-bubble";
+  bubble.textContent = content;
+
+  if (options.loading) {
+    bubble.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+    message.dataset.loading = "true";
+  }
+
+  message.append(avatar, bubble);
   chatMessages.appendChild(message);
   chatMessages.scrollTop = chatMessages.scrollHeight;
+  return bubble;
 }
 
 function setComposerState(disabled) {
+  isSending = disabled;
   userInput.disabled = disabled;
-  chatForm.querySelector('button[type="submit"]').disabled = disabled;
+  sendButton.disabled = disabled;
+  if (disabled) {
+    statusText.textContent = "Thinking...";
+  }
+}
+
+async function parseApiResponse(response) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    const text = await response.text();
+    if (text.toLowerCase().includes("<html")) {
+      throw new Error(
+        "Backend not connected. Run Flask locally or set CHATBOT_API_URL in config.js to your deployed backend."
+      );
+    }
+    throw new Error("Backend returned an unexpected response.");
+  }
+
+  return response.json();
 }
 
 async function requestBotReply(message) {
@@ -47,69 +83,72 @@ async function requestBotReply(message) {
     },
     body: JSON.stringify({
       message,
-      previous_response_id: previousResponseId
+      session_id: sessionId
     })
   });
 
-  const contentType = response.headers.get("content-type") || "";
-  let payload;
-
-  if (contentType.includes("application/json")) {
-    payload = await response.json();
-  } else {
-    const text = await response.text();
-    throw new Error(
-      text.includes("<html")
-        ? "Chat API not found. If you opened this on GitHub Pages, deploy the Flask backend separately and set window.CHATBOT_API_URL in config.js."
-        : "The chatbot API returned an unexpected response."
-    );
+  const payload = await parseApiResponse(response);
+  if (!response.ok) {
+    throw new Error(payload.reply || payload.error || "The chatbot API could not answer right now.");
   }
 
-if (!response.ok) {
-   throw new Error(payload.reply || payload.error || "Unknown backend error");
-}
-
-  previousResponseId = payload.response_id || null;
   return payload.reply || "I could not generate a response this time.";
 }
 
-async function handleSend(message) {
+async function handleSend(rawMessage) {
+  const message = rawMessage.trim();
   if (isSending) {
     return;
   }
 
-  if (!message.trim()) {
+  if (!message) {
     appendMessage("Please type a question so I can help.", "bot");
     return;
   }
 
-  isSending = true;
   appendMessage(message, "user");
-  appendMessage("Thinking...", "bot");
+  const loadingBubble = appendMessage("", "bot", { loading: true });
   setComposerState(true);
-
-  const placeholder = chatMessages.lastElementChild;
+  let requestFailed = false;
 
   try {
-    const response = await requestBotReply(message);
-    placeholder.textContent = response;
+    loadingBubble.textContent = await requestBotReply(message);
+    statusText.textContent = "Online";
   } catch (error) {
-   addBotMessage("Error: " + error.message);
-} finally {
-    isSending = false;
+    requestFailed = true;
+    loadingBubble.textContent = error.message;
+    loadingBubble.classList.add("error");
+    statusText.textContent = "Needs backend";
+  } finally {
     setComposerState(false);
+    if (!requestFailed) {
+      statusText.textContent = "Online";
+    }
     userInput.focus();
   }
 }
 
+async function clearServerMemory() {
+  try {
+    await fetch(`${apiBaseUrl}/clear`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ session_id: sessionId })
+    });
+  } catch {
+    // The local UI can still be cleared even if the backend is offline.
+  }
+}
+
 function setWelcomeMessages() {
-  previousResponseId = null;
   chatMessages.innerHTML = "";
   appendMessage(
-    "Hello! I'm CourseBot. You can ask multiple follow-up questions about fees, syllabus, timings, eligibility, contact details, and more.",
+    "Hi, I am CourseBot. Ask me about fees, syllabus, duration, eligibility, timings, mode, certification, or admissions contact details.",
     "bot"
   );
-  appendMessage(formatCourseList(), "bot");
+  appendMessage(`Available courses: ${courses.join(", ")}.`, "bot");
 }
 
 chatForm.addEventListener("submit", async (event) => {
@@ -121,13 +160,12 @@ chatForm.addEventListener("submit", async (event) => {
 
 chips.forEach((chip) => {
   chip.addEventListener("click", async () => {
-    const question = chip.textContent || "";
-    userInput.value = "";
-    await handleSend(question);
+    await handleSend(chip.textContent || "");
   });
 });
 
-clearChatButton.addEventListener("click", () => {
+clearChatButton.addEventListener("click", async () => {
+  await clearServerMemory();
   setWelcomeMessages();
   userInput.focus();
 });
