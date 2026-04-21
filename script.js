@@ -1,9 +1,3 @@
-const courses = [
-  "AI Foundations Bootcamp",
-  "Data Science Career Program",
-  "Automation with Python"
-];
-
 const chatMessages = document.getElementById("chat-messages");
 const chatForm = document.getElementById("chat-form");
 const userInput = document.getElementById("user-input");
@@ -11,10 +5,20 @@ const sendButton = document.getElementById("send-button");
 const clearChatButton = document.getElementById("clear-chat");
 const chips = document.querySelectorAll(".chip");
 const statusText = document.getElementById("status-text");
+const courseCount = document.getElementById("course-count");
+const courseLibrary = document.getElementById("course-library");
 
 const apiBaseUrl = (window.CHATBOT_API_URL || "").replace(/\/$/, "");
 const sessionId = getSessionId();
 let isSending = false;
+let courses = [
+  "AI Foundations Bootcamp",
+  "Data Science Career Program",
+  "Automation with Python",
+  "Full Stack Web Development",
+  "Cloud Computing Essentials",
+  "Cybersecurity Fundamentals"
+];
 
 function getSessionId() {
   const existing = localStorage.getItem("coursebot_session_id");
@@ -37,17 +41,78 @@ function appendMessage(content, sender, options = {}) {
 
   const bubble = document.createElement("p");
   bubble.className = "message-bubble";
-  bubble.textContent = content;
 
   if (options.loading) {
     bubble.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
     message.dataset.loading = "true";
+  } else if (sender === "bot") {
+    renderStructuredReply(bubble, content);
+  } else {
+    bubble.textContent = content;
   }
 
   message.append(avatar, bubble);
   chatMessages.appendChild(message);
   chatMessages.scrollTop = chatMessages.scrollHeight;
   return bubble;
+}
+
+function escapeHtml(value) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatInlineMarkdown(value) {
+  return escapeHtml(value).replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+}
+
+function renderStructuredReply(element, content) {
+  const lines = content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) {
+    element.textContent = "";
+    return;
+  }
+
+  const html = [];
+  let listOpen = false;
+
+  lines.forEach((line) => {
+    const bulletMatch = line.match(/^[-*]\s+(.*)$/);
+
+    if (bulletMatch) {
+      if (!listOpen) {
+        html.push("<ul>");
+        listOpen = true;
+      }
+      html.push(`<li>${formatInlineMarkdown(bulletMatch[1])}</li>`);
+      return;
+    }
+
+    if (listOpen) {
+      html.push("</ul>");
+      listOpen = false;
+    }
+
+    if (/^\*\*.+\*\*$/.test(line)) {
+      html.push(`<h3>${formatInlineMarkdown(line.replace(/^\*\*|\*\*$/g, ""))}</h3>`);
+    } else {
+      html.push(`<p>${formatInlineMarkdown(line)}</p>`);
+    }
+  });
+
+  if (listOpen) {
+    html.push("</ul>");
+  }
+
+  element.innerHTML = html.join("");
 }
 
 function setComposerState(disabled) {
@@ -112,7 +177,7 @@ async function handleSend(rawMessage) {
   let requestFailed = false;
 
   try {
-    loadingBubble.textContent = await requestBotReply(message);
+    renderStructuredReply(loadingBubble, await requestBotReply(message));
     statusText.textContent = "Online";
   } catch (error) {
     requestFailed = true;
@@ -142,13 +207,43 @@ async function clearServerMemory() {
   }
 }
 
+function renderCourseLibrary() {
+  courseLibrary.innerHTML = "";
+
+  courses.forEach((course, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "course-library-item";
+    button.innerHTML = `<span>${String(index + 1).padStart(2, "0")}</span><strong>${course}</strong>`;
+    button.addEventListener("click", () => {
+      handleSend(`Tell me about ${course}`);
+    });
+    courseLibrary.appendChild(button);
+  });
+}
+
+async function loadCourses() {
+  try {
+    const response = await fetch(`${apiBaseUrl}/courses`);
+    const payload = await parseApiResponse(response);
+
+    if (Array.isArray(payload.courses) && payload.courses.length > 0) {
+      courses = payload.courses;
+      courseCount.textContent = String(payload.count || courses.length);
+    }
+  } catch {
+    courseCount.textContent = String(courses.length);
+  } finally {
+    renderCourseLibrary();
+  }
+}
+
 function setWelcomeMessages() {
   chatMessages.innerHTML = "";
   appendMessage(
     "Hi, I am CourseBot. Ask me about fees, syllabus, duration, eligibility, timings, mode, certification, or admissions contact details.",
     "bot"
   );
-  appendMessage(`Available courses: ${courses.join(", ")}.`, "bot");
 }
 
 chatForm.addEventListener("submit", async (event) => {
@@ -170,4 +265,4 @@ clearChatButton.addEventListener("click", async () => {
   userInput.focus();
 });
 
-setWelcomeMessages();
+loadCourses().finally(setWelcomeMessages);

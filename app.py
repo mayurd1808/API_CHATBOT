@@ -48,6 +48,18 @@ Rules:
 - If the answer is not available in the catalog, say so clearly and suggest contacting admissions.
 - Keep replies concise, helpful, and easy to read.
 - Do not invent courses, discounts, deadlines, or admission promises.
+- Use clean Markdown for structured answers.
+- For multiple courses, use this format:
+  "Here are the details:"
+  "- **Course name**: detail"
+- For one course, use this format when relevant:
+  "**Course name**"
+  "- Fee: ..."
+  "- Duration: ..."
+  "- Timings: ..."
+  "- Mode: ..."
+  "- Certification: ..."
+- Do not use long paragraphs when a list is clearer.
 """.strip()
 
 
@@ -65,6 +77,13 @@ def home():
 @app.route("/health")
 def health():
     return jsonify({"ok": True, "service": "CourseBot API"})
+
+
+@app.route("/courses")
+def courses():
+    course_data = load_course_data()
+    names = [course["name"] for course in course_data["courses"]]
+    return jsonify({"count": len(names), "courses": names})
 
 
 @app.route("/chat", methods=["POST"])

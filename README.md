@@ -7,7 +7,7 @@ CourseBot is a Flask + Groq API chatbot for course admissions questions. The UI 
 - Animated responsive chat interface
 - Groq API integration through Flask
 - Per-browser-session conversation memory
-- Course catalog loaded from `data/course_data.json`
+- Six-course catalog loaded from `data/course_data.json`
 - Clear backend/API error messages
 - Works locally, or with GitHub Pages frontend plus a deployed backend
 
@@ -56,8 +56,15 @@ Do not add `/chat` at the end. The frontend adds `/chat` automatically.
 - What about its syllabus?
 - And the timings?
 - Which course is best for beginners?
+- Suggest a course for web development.
+- Tell me about Cloud Computing Essentials.
+- What is Cybersecurity Fundamentals?
 - How can I contact admissions?
 
 ## Important
 
 Never paste your real API key into GitHub files like `.env.example`, `script.js`, or `index.html`. Put the real key only in `.env` locally or in your backend hosting provider's environment variables.
+
+
+
+URL=https://api-chatbot-czop.onrender.com/

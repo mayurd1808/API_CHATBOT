@@ -12,27 +12,36 @@
 <body>
   <div class="orb orb-one"></div>
   <div class="orb orb-two"></div>
+  <div class="particle-field" aria-hidden="true">
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
 
   <main class="page">
     <section class="hero">
-      <p class="eyebrow">API powered admissions assistant</p>
+      <p class="eyebrow">AI powered admissions assistant</p>
       <h1>Ask courses. Get instant answers.</h1>
       <p class="subtitle">
-        CourseBot uses your backend API, course catalog, and conversation memory to answer natural follow-up questions.
+        Discover the right program faster with clear course details, smart follow-up answers, and friendly admissions guidance.
       </p>
-
-      <div class="hero-actions" aria-label="CourseBot highlights">
-        <span>Multi-turn memory</span>
-        <span>Groq API backend</span>
-        <span>Course data grounded</span>
-      </div>
     </section>
 
     <section class="app-grid">
       <aside class="info-panel">
         <div class="glass-card stat-card">
-          <span class="stat-number">3</span>
+          <span id="course-count" class="stat-number">6</span>
           <span class="stat-label">Active courses</span>
+        </div>
+
+        <div class="glass-card course-library-card">
+          <div class="library-header">
+            <h2>Available Courses</h2>
+          </div>
+          <div id="course-library" class="course-library" aria-label="Available courses"></div>
         </div>
 
         <div class="glass-card">
@@ -40,17 +49,11 @@
           <ul class="prompt-list">
             <li>Compare the AI and Automation courses.</li>
             <li>Which course is best for beginners?</li>
-            <li>Tell me the fee, then the syllabus.</li>
+            <li>Suggest a course for web development.</li>
           </ul>
         </div>
 
-        <div class="glass-card connection-card">
-          <span class="pulse"></span>
-          <div>
-            <strong id="status-text">Online</strong>
-            <p>Connected to your Flask chat endpoint when the backend is running.</p>
-          </div>
-        </div>
+        <span id="status-text" class="sr-only">Online</span>
       </aside>
 
       <section class="chat-shell" aria-label="CourseBot chat">
@@ -69,8 +72,9 @@
 
         <div class="quick-questions">
           <button type="button" class="chip">What is the fee for AI Foundations Bootcamp?</button>
-          <button type="button" class="chip">What about its syllabus?</button>
-          <button type="button" class="chip">And the timings?</button>
+          <button type="button" class="chip">Suggest a course for web development.</button>
+          <button type="button" class="chip">Tell me about Cloud Computing Essentials.</button>
+          <button type="button" class="chip">What is Cybersecurity Fundamentals?</button>
           <button type="button" class="chip">How can I contact admissions?</button>
         </div>
 

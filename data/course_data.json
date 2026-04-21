@@ -50,6 +50,57 @@
       "timings": "Evening batches: Tuesday and Thursday, 6:30 PM to 8:00 PM IST.",
       "mode": "Online instructor-led program.",
       "certification": "Project-based completion certificate."
+    },
+    {
+      "name": "Full Stack Web Development",
+      "aliases": ["full stack", "web development", "mern", "full stack web"],
+      "fees": "INR 34,999",
+      "duration": "14 weeks",
+      "syllabus": [
+        "HTML, CSS, and modern JavaScript",
+        "React fundamentals and component design",
+        "Node.js and Express APIs",
+        "MongoDB and database modeling",
+        "Deployment, GitHub workflow, and portfolio project"
+      ],
+      "eligibility": "Beginners and students who are comfortable with basic computer usage.",
+      "timings": "Weekday evening batches: Monday, Wednesday, Friday, 6:30 PM to 8:30 PM IST.",
+      "mode": "Online live classes with hands-on assignments.",
+      "certification": "Certificate and project portfolio review after final deployment."
+    },
+    {
+      "name": "Cloud Computing Essentials",
+      "aliases": ["cloud", "cloud computing", "aws basics", "cloud essentials"],
+      "fees": "INR 22,999",
+      "duration": "7 weeks",
+      "syllabus": [
+        "Cloud fundamentals and service models",
+        "Linux and networking basics",
+        "AWS core services overview",
+        "Storage, compute, and databases",
+        "Mini project: deploy a web app on cloud"
+      ],
+      "eligibility": "Students, IT beginners, or professionals who want cloud fundamentals.",
+      "timings": "Weekend batches: Saturday and Sunday, 4:00 PM to 6:00 PM IST.",
+      "mode": "Online instructor-led sessions with lab practice.",
+      "certification": "Completion certificate with cloud project evaluation."
+    },
+    {
+      "name": "Cybersecurity Fundamentals",
+      "aliases": ["cybersecurity", "cyber security", "security basics", "ethical hacking basics"],
+      "fees": "INR 27,500",
+      "duration": "10 weeks",
+      "syllabus": [
+        "Security concepts and threat landscape",
+        "Network security fundamentals",
+        "Web application security basics",
+        "Password, phishing, and malware awareness",
+        "Final lab: vulnerability assessment report"
+      ],
+      "eligibility": "Basic networking or programming knowledge is helpful but not mandatory.",
+      "timings": "Weekend morning batches: Saturday and Sunday, 9:30 AM to 11:30 AM IST.",
+      "mode": "Online live classes with guided security labs.",
+      "certification": "Certificate of completion after lab assessment."
     }
   ],
   "default_contact": {
